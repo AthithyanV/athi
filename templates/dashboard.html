@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rice Processing &amp; Buyer Allocation Dashboard</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <div class="header">
+        <h1>🌾 AI Rice Processing &amp; Buyer Slot Allocation</h1>
+        <div class="status"><span class="dot"></span> <span id="conn-status">Connecting…</span></div>
+    </div>
+
+    <div class="container">
+        <!-- Stats Row -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">Total Batches</div>
+                <div class="value" id="stat-batches">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Total Buyers</div>
+                <div class="value" id="stat-buyers">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Allocated</div>
+                <div class="value" id="stat-allocated">0 kg</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Allocation %</div>
+                <div class="value" id="stat-alloc-pct">0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Slot Count</div>
+                <div class="value" id="stat-slots">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Total Weight</div>
+                <div class="value" id="stat-weight">0 kg</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- New Batch Form -->
+            <div class="panel">
+                <div class="panel-header"><h2>➕ New Rice Batch</h2></div>
+                <div class="panel-body">
+                    <form id="batch-form">
+                        <div class="form-row">
+                            <select name="variety" required>
+                                <option value="">Variety…</option>
+                                <option>Basmati</option>
+                                <option>Jasmine</option>
+                                <option>Sona Masoori</option>
+                                <option>Ponni</option>
+                                <option>Brown Rice</option>
+                                <option>Wild Rice</option>
+                            </select>
+                            <input name="weight_kg" type="number" step="0.1" placeholder="Weight (kg)" required>
+                        </div>
+                        <div class="form-row">
+                            <input name="moisture_pct" type="number" step="0.1" placeholder="Moisture %" required>
+                            <input name="origin" type="text" placeholder="Origin" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Batch (AI Predict)</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- New Buyer Form -->
+            <div class="panel">
+                <div class="panel-header"><h2>👤 Register Buyer</h2></div>
+                <div class="panel-body">
+                    <form id="buyer-form">
+                        <div class="form-row">
+                            <input name="buyer_name" type="text" placeholder="Buyer Name" required>
+                            <input name="company" type="text" placeholder="Company" required>
+                        </div>
+                        <div class="form-row">
+                            <input name="pref_varieties" type="text" placeholder="Preferred Varieties (comma-sep)" required>
+                            <input name="max_qty" type="number" step="0.1" placeholder="Max Qty (kg)" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Register Buyer</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Processing Stage Chart -->
+            <div class="panel">
+                <div class="panel-header"><h2>📊 Processing Stages</h2></div>
+                <div class="panel-body">
+                    <div class="chart-area" id="stage-chart"><span style="color:var(--text-light);font-size:.8rem">No data yet</span></div>
+                </div>
+            </div>
+
+            <!-- Quality Grade Chart -->
+            <div class="panel">
+                <div class="panel-header"><h2>🏅 Quality Grades (AI)</h2></div>
+                <div class="panel-body">
+                    <div class="chart-area" id="grade-chart"><span style="color:var(--text-light);font-size:.8rem">No data yet</span></div>
+                </div>
+            </div>
+
+            <!-- Batches Table -->
+            <div class="panel full-width">
+                <div class="panel-header"><h2>🌾 Rice Batches</h2></div>
+                <div class="panel-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>Variety</th><th>Weight</th><th>Moisture</th>
+                                <th>Stage</th><th>AI Grade</th><th>Final Grade</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batches-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Buyers Table -->
+            <div class="panel full-width">
+                <div class="panel-header"><h2>👥 Buyers</h2></div>
+                <div class="panel-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>Name</th><th>Company</th><th>Preferred Varieties</th><th>Capacity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="buyers-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Slot Allocations Table -->
+            <div class="panel full-width">
+                <div class="panel-header"><h2>📦 Slot Allocations</h2></div>
+                <div class="panel-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>Batch</th><th>Buyer</th><th>Qty</th>
+                                <th>Variety</th><th>Status</th><th>AI Score</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="slots-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb" crossorigin="anonymous"></script>
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
